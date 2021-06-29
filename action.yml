@@ -1,0 +1,84 @@
+name: Set Helm Template Image Tag Value
+author: Matt Wise
+description: |-
+  Using `yq`, updates a Helm chart's "image tag" value.
+inputs:
+  values_files:
+    description: >-
+      The path to the `values.yaml` file that you want to modify.
+    required: true
+    default: chart/values.yaml
+
+  tag_keys:
+    description: >-
+      The dot-notation path to the YAML key (or keys, if listed as a CSV) that
+      should be updated.
+    required: true
+    default: .image.tag
+
+  tag_value:
+    description: The destination tag (the new tag) to create and publish
+    required: true
+
+  bump_level:
+    description: >-
+      `patch`, `minor`, `major`, or `null` to skip bumping the Chart version.
+    required: true
+    default: patch
+
+  helm_docs:
+    description: >-
+      Enables or disables (`true` or `false`) automated updating of the Helm
+      documentation.
+    required: true
+    default: 'true'
+
+  commit_branch:
+    description: >-
+      If supplied, the job will check out this branch before making any git
+      commits. This is useful when you are running this action on a Tag
+      trigger rather than a branch or pull-request trigger.
+    required: false
+
+  commit_tag:
+    description: >-
+      If supplied, the job will create a new branch pointing to the commit that
+      has just been created as part of the release process. If you do not set
+      $commit_branch, you must set $commit_tag or the final `git push` will
+      fail.
+    required: false
+
+  commit_message:
+    description: Commit message
+    required: false
+    default: Automated commit on behalf-of ${{ github.actor }}
+
+  force:
+    description: >-
+      If true, then the git tag event (and the git push) will be forced. This
+      will overwrite existing tags.
+    default: true
+    required: true
+
+  commit_options:
+    description: Commit options (eg. --no-verify)
+    required: false
+    default: ''
+
+  verbose:
+    description: >-
+      If set to 'true', then the 'set -x' flag will be turned on to help debug
+      the action.
+    required: false
+    default: 'false'
+
+  dry:
+    description: >-
+      If set to 'true', then at the end of the work a Git diff will be printed
+      out, but no git push will happen.
+    required: false
+    default: 'false'
+
+runs:
+  using: docker
+  image: Dockerfile
