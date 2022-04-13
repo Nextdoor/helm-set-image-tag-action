@@ -13,6 +13,13 @@ INPUT_TAG_VALUE=${INPUT_TAG_VALUE//refs\/heads\//}
 INPUT_COMMIT_BRANCH=${INPUT_COMMIT_BRANCH//refs\/heads\//}
 INPUT_COMMIT_TAG=${INPUT_COMMIT_TAG//refs\/tags\//}
 
+
+# This is a workaround for changes in git which introduced strict defaults to
+# address https://ubuntu.com/security/CVE-2022-24765.
+# In essence, git changed how it executes on multi-user machine/situations, and
+# fails when the  directory is owned by a different user than the one executing.
+git config --global --add safe.directory /github/workspace;
+
 if [ "${INPUT_FORCE}" == "true" ]; then
   FORCE_OPT="--force"
 else
