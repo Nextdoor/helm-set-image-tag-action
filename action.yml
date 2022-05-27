@@ -20,6 +20,10 @@ inputs:
     description: The destination tag (the new tag) to create and publish
     required: true
 
+  tag_values:
+    description: Comma-separated values for tag_keys.
+    required: false
+
   bump_level:
     description: >-
       `patch`, `minor`, `major`, or `null` to skip bumping the Chart version.

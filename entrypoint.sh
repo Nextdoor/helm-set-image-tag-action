@@ -34,7 +34,27 @@ _update_values() {
 
   # Create a single YQ eval string that has all of our keys...
   local EXPR
-  EXPR=$(printf "( %s = \"${INPUT_TAG_VALUE}\" )|" "${KEYS_ARR[@]}" | sed 's/.$//') || return 1
+
+  # Use tag_values if it is specified
+  if [ -n "${INPUT_TAG_VALUES}" ]; then
+    local VALUES_ARR
+    IFS=', ' read -r -a VALUES_ARR <<< "$INPUT_TAG_VALUES"
+    if [ ${#KEYS_ARR[@]} != ${#VALUES_ARR[@]} ]; then
+      echo "tag_keys and tag_values should have the same number of elements."
+      return 1
+    fi
+    local ZIPPED_ARR
+    local ONE_VALUE
+    for (( i=0; i<${#KEYS_ARR[@]}; ++i)); do
+      ONE_VALUE=${VALUES_ARR[$i]}
+      ONE_VALUE=${ONE_VALUE//refs\/tags\//}
+      ONE_VALUE=${ONE_VALUE//refs\/heads\//}
+      ZIPPED_ARR+=( "${KEYS_ARR[$i]}" "${ONE_VALUE}" )
+    done
+    EXPR=$(printf "( %s = \"%s\" )|" "${ZIPPED_ARR[@]}" | sed 's/.$//') || return 1
+  else
+    EXPR=$(printf "( %s = \"${INPUT_TAG_VALUE}\" )|" "${KEYS_ARR[@]}" | sed 's/.$//') || return 1
+  fi
 
   # Use `yq` to create the initial change by inline-modifying the files...
   echo "Setting ${EXPR} in ${INPUT_VALUES_FILES}"...

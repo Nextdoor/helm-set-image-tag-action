@@ -87,6 +87,11 @@ jobs:
         #
         tag_value: ${{ github.ref }}
 
+        # A comma-separated list of values to update within the Values file(s).
+        # The number of values should match the number of keys in tag_keys.
+        # The values appear in the same order as the keys.
+        # tag_values: ''
+
         # This is the sem-ver level that will be bumped for each release.
         # `major`, `minor`, `path` or `null` are allowed. If you set `null` then
         # it will skip bumping the version.
