@@ -108,7 +108,9 @@ _git_switch_to_branch
 _update_values
 _update_chart_version
 _update_helm_docs
-_git_add
-_git_commit
-_git_tag
-_git_push
+if [ "${INPUT_COMMIT_AND_PUSH}" == "true" ]; then
+  _git_add
+  _git_commit
+  _git_tag
+  _git_push
+fi

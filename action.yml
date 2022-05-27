@@ -53,6 +53,11 @@ inputs:
     required: false
     default: Automated commit on behalf-of ${{ github.actor }}
 
+  commit_and_push:
+    description: Whether to commit and push to remote.
+    required: true
+    default: true
+
   force:
     description: >-
       If true, then the git tag event (and the git push) will be forced. This

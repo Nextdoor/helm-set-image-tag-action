@@ -115,6 +115,13 @@ jobs:
         #
         commit_tag: ${{ github.ref }}-chart
 
+        # Whether to commit and push to the remote repository, default to true.
+        # You can modify multiple keys and values in the values file by calling
+        # this action multiple times but only setting commit_and_push to true in
+        # the last call.
+        #
+        # commit_and_push: true
+
         # Override the message used in the git commit.
         #
         # commit_message: Automated commit on behalf-of ${{ github.actor }}
