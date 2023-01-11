@@ -14,6 +14,10 @@ INPUT_COMMIT_BRANCH=${INPUT_COMMIT_BRANCH//refs\/heads\//}
 INPUT_COMMIT_TAG=${INPUT_COMMIT_TAG//refs\/tags\//}
 
 
+# Take the CSV-submitted list of value files and parse them into an array.
+IFS=', ' read -r -a INPUT_VALUES_FILES_ARR <<< "$INPUT_VALUES_FILES"
+
+
 # This is a workaround for changes in git which introduced strict defaults to
 # address https://ubuntu.com/security/CVE-2022-24765.
 # In essence, git changed how it executes on multi-user machine/situations, and
@@ -37,8 +41,8 @@ _update_values() {
   EXPR=$(printf "( %s = \"${INPUT_TAG_VALUE}\" )|" "${KEYS_ARR[@]}" | sed 's/.$//') || return 1
 
   # Use `yq` to create the initial change by inline-modifying the files...
-  echo "Setting ${EXPR} in ${INPUT_VALUES_FILES}"...
-  yq eval-all "${EXPR}" -i ${INPUT_VALUES_FILES}
+  echo "Setting ${EXPR} in ${INPUT_VALUES_FILES_ARR[*]}"...
+  yq eval-all "${EXPR}" -i ${INPUT_VALUES_FILES_ARR[*]}
 }
 
 _update_chart_version() {
@@ -49,8 +53,13 @@ _update_chart_version() {
 
 _update_helm_docs() {
   [ "${INPUT_HELM_DOCS}" == 'true' ] || return 0
-  echo "Running helm-docs... (helm_docs: ${INPUT_HELM_DOCS})"
-  helm-docs --chart-search-root $(dirname ${INPUT_VALUES_FILES})
+
+
+  for INPUT_VALUES_FILE in "${INPUT_VALUES_FILES_ARR[@]}"
+  do
+    echo "Running helm-docs... (helm_docs: ${INPUT_HELM_DOCS}, file: ${INPUT_VALUES_FILE})"
+    helm-docs --chart-search-root $(dirname ${INPUT_VALUES_FILE})
+  done
 }
 
 _git_switch_to_branch(){
