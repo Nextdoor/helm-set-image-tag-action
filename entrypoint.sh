@@ -41,8 +41,11 @@ _update_values() {
   EXPR=$(printf "( %s = \"${INPUT_TAG_VALUE}\" )|" "${KEYS_ARR[@]}" | sed 's/.$//') || return 1
 
   # Use `yq` to create the initial change by inline-modifying the files...
-  echo "Setting ${EXPR} in ${INPUT_VALUES_FILES_ARR[*]}"...
-  yq eval-all "${EXPR}" -i ${INPUT_VALUES_FILES_ARR[*]}
+  for INPUT_VALUES_FILE in "${INPUT_VALUES_FILES_ARR[@]}"
+  do
+    echo "Setting ${EXPR} in ${INPUT_VALUES_FILE}"...
+    yq eval-all "${EXPR}" -i ${INPUT_VALUES_FILE}
+  done
 }
 
 _update_chart_version() {
