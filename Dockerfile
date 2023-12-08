@@ -1,4 +1,4 @@
-FROM alpine:3.18
+FROM alpine:3.19
 
 LABEL "com.github.actions.name"="Helm Set Image Tag Action"
 LABEL "com.github.actions.description"="A Github Action for automatically updating a Helm template image tag"
