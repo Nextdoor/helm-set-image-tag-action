@@ -13,7 +13,7 @@ RUN apk --no-cache add bash yq git patch py-pip py3-ruamel.yaml gcc musl-dev pyt
 RUN pip install pybump yamale yamllint pyyaml
 
 COPY --from=alpine/helm:latest /usr/bin/helm /usr/bin/helm
-COPY --from=jnorwood/helm-docs:v1.11.3 /usr/bin/helm-docs /usr/bin/helm-docs
+COPY --from=jnorwood/helm-docs:v1.13.1 /usr/bin/helm-docs /usr/bin/helm-docs
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
