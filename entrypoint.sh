@@ -48,10 +48,93 @@ _update_values() {
   done
 }
 
+# Bump the `version:` key of a Helm Chart.yaml in place, using `yq` and bash.
+#
+# This replaces `pybump bump`, which was the only reason this image contained
+# Python at all. A Docker action's image is built by the runner during *job
+# setup*, before step 1 of the job -- so no `aws-login` step can ever run
+# early enough to authenticate a package install here, and no build secret is
+# reachable. The dependency therefore has to go, rather than be re-routed.
+#
+# Behaviour is matched to pybump 1.14.2, which is what this image installed:
+#   * the file must be a Helm chart (apiVersion + name + version), else fail;
+#   * the version is semver, with an optional lower-case `v` prefix, an
+#     optional `-release` and an optional `+metadata`; all three are preserved;
+#   * major and minor and patch components reject leading zeros;
+#   * major -> (X+1).0.0 , minor -> X.(Y+1).0 , patch -> X.Y.(Z+1);
+#   * the resulting version is echoed to stdout;
+#   * on any validation failure nothing is written and the action fails.
+_bump_semver() {
+  local version="$1" level="$2"
+  local prefix='' release='' metadata='' core part major minor patch
+
+  # An optional lower-case 'v' prefix is allowed and preserved.
+  case "${version}" in v*) prefix='v'; version="${version#v}" ;; esac
+
+  # Split '+metadata' before '-release': build metadata is always last.
+  case "${version}" in *+*) metadata="${version#*+}"; version="${version%%+*}" ;; esac
+  case "${version}" in *-*) release="${version#*-}";  version="${version%%-*}" ;; esac
+  core="${version}"
+
+  if ! [[ "${core}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+    return 1
+  fi
+  major="${BASH_REMATCH[1]}"; minor="${BASH_REMATCH[2]}"; patch="${BASH_REMATCH[3]}"
+
+  # Dot-separated pre-release identifiers: numeric (no leading zeros) or
+  # alphanumeric/hyphen. Build-metadata identifiers are alphanumeric/hyphen.
+  if [ -n "${release}" ]; then
+    local IFS=.
+    for part in ${release}; do
+      [[ "${part}" =~ ^(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)$ ]] || return 1
+    done
+  fi
+  if [ -n "${metadata}" ]; then
+    local IFS=.
+    for part in ${metadata}; do
+      [[ "${part}" =~ ^[0-9a-zA-Z-]+$ ]] || return 1
+    done
+  fi
+
+  case "${level}" in
+    major) major=$(( major + 1 )); minor=0; patch=0 ;;
+    minor) minor=$(( minor + 1 )); patch=0 ;;
+    patch) patch=$(( patch + 1 )) ;;
+    *)
+      echo "Error, invalid level: '${level}', should be major|minor|patch." >&2
+      return 1
+      ;;
+  esac
+
+  printf '%s%s.%s.%s%s%s\n' \
+    "${prefix}" "${major}" "${minor}" "${patch}" \
+    "${release:+-${release}}" "${metadata:++${metadata}}"
+}
+
 _update_chart_version() {
   [ -n "${INPUT_BUMP_LEVEL}" ] || return 0
   echo "Bumping chart version... (bump_level: ${INPUT_BUMP_LEVEL})"
-  pybump bump --file $(dirname ${INPUT_VALUES_FILES})/Chart.yaml  --level ${INPUT_BUMP_LEVEL}
+
+  local CHART_FILE
+  CHART_FILE=$(dirname ${INPUT_VALUES_FILES})/Chart.yaml
+
+  # Same mandatory-key check pybump made before touching anything.
+  if [ "$(yq eval '[has("apiVersion"), has("name"), has("version")] | all' "${CHART_FILE}")" != "true" ]; then
+    echo "Input file is not a valid Helm chart.yaml: ${CHART_FILE}" >&2
+    return 1
+  fi
+
+  local CURRENT NEW
+  CURRENT=$(yq eval '.version' "${CHART_FILE}")
+
+  if ! NEW=$(_bump_semver "${CURRENT}" "${INPUT_BUMP_LEVEL}"); then
+    echo "Invalid semantic version format: ${CURRENT}" >&2
+    echo "Make sure to comply with https://semver.org/ (lower case 'v' prefix is allowed)" >&2
+    return 1
+  fi
+
+  NEW="${NEW}" yq eval -i '.version = strenv(NEW)' "${CHART_FILE}"
+  echo "${NEW}"
 }
 
 _update_helm_docs() {
