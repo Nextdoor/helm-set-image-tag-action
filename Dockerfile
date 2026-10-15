@@ -21,7 +21,7 @@ LABEL "maintainer"="diranged"
 RUN apk --no-cache add bash yq git patch
 
 COPY --from=alpine/helm:latest /usr/bin/helm /usr/bin/helm
-COPY --from=jnorwood/helm-docs:v1.11.3 /usr/bin/helm-docs /usr/bin/helm-docs
+COPY --from=jnorwood/helm-docs:v1.14.2 /usr/bin/helm-docs /usr/bin/helm-docs
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
