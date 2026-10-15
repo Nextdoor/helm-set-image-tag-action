@@ -6,7 +6,7 @@ ARG REGISTRY=docker.io
 FROM ${REGISTRY}/alpine/helm:4.3.0 AS helm
 FROM ${REGISTRY}/jnorwood/helm-docs:v1.11.3 AS helm-docs
 
-FROM ${REGISTRY}/library/alpine:3.18
+FROM ${REGISTRY}/library/alpine:3.24
 
 LABEL "com.github.actions.name"="Helm Set Image Tag Action"
 LABEL "com.github.actions.description"="A Github Action for automatically updating a Helm template image tag"
