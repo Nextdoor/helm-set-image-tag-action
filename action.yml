@@ -84,6 +84,79 @@ inputs:
     required: false
     default: 'false'
 
+  base_image_registry:
+    description: >-
+      Where to pull this action's base images from (`alpine`, `alpine/helm`
+      and `jnorwood/helm-docs`). The default is Docker Hub. Set it to a
+      registry mirror that uses Docker Hub's paths (for example a pull-through
+      cache) to avoid Docker Hub. If the mirror needs a login, log in to it in
+      an earlier step of the same job.
+    required: false
+    default: docker.io
+
+# This used to be a `docker` action. Those are built by the runner during job
+# setup, before any step runs, so no step could log in to a registry mirror
+# first. As a composite action, the image is built here instead, after the
+# job's earlier steps. The `docker run` below mirrors how the runner starts a
+# `docker` action, so `entrypoint.sh` sees the same paths and variables.
 runs:
-  using: docker
-  image: Dockerfile
+  using: composite
+  steps:
+    - name: Build the action image
+      shell: bash
+      env:
+        REGISTRY: ${{ inputs.base_image_registry }}
+        IMAGE: helm-set-image-tag-action:${{ github.run_id }}-${{ github.run_attempt }}
+      run: |-
+        docker build \
+          --build-arg "REGISTRY=${REGISTRY:-docker.io}" \
+          --tag "${IMAGE}" \
+          "${GITHUB_ACTION_PATH}"
+
+    - name: Update the Helm chart
+      shell: bash
+      env:
+        IMAGE: helm-set-image-tag-action:${{ github.run_id }}-${{ github.run_attempt }}
+        INPUT_VALUES_FILES: ${{ inputs.values_files }}
+        INPUT_TAG_KEYS: ${{ inputs.tag_keys }}
+        INPUT_TAG_VALUE: ${{ inputs.tag_value }}
+        INPUT_BUMP_LEVEL: ${{ inputs.bump_level }}
+        INPUT_HELM_DOCS: ${{ inputs.helm_docs }}
+        INPUT_COMMIT_BRANCH: ${{ inputs.commit_branch }}
+        INPUT_COMMIT_TAG: ${{ inputs.commit_tag }}
+        INPUT_COMMIT_MESSAGE: ${{ inputs.commit_message }}
+        INPUT_COMMIT_AND_PUSH: ${{ inputs.commit_and_push }}
+        INPUT_FORCE: ${{ inputs.force }}
+        INPUT_COMMIT_OPTIONS: ${{ inputs.commit_options }}
+        INPUT_VERBOSE: ${{ inputs.verbose }}
+        INPUT_DRY: ${{ inputs.dry }}
+      run: |-
+        set -euo pipefail
+
+        # The name the runner gave this step when it was a `docker` action;
+        # the entrypoint uses it as the git committer name.
+        export GITHUB_ACTION="__Nextdoor_helm-set-image-tag-action"
+
+        # Pass through the same kinds of variables the runner passes to a
+        # `docker` action, pointing the path ones at the container mounts.
+        ENV_ARGS=()
+        for name in $(compgen -e); do
+          case "${name}" in
+            INPUT_*|GITHUB_*|RUNNER_*|ACTIONS_*) ENV_ARGS+=(-e "${name}") ;;
+          esac
+        done
+
+        mkdir -p "${RUNNER_TEMP}/_github_home"
+
+        docker run --rm \
+          --workdir /github/workspace \
+          "${ENV_ARGS[@]}" \
+          -e HOME=/github/home \
+          -e GITHUB_WORKSPACE=/github/workspace \
+          -e RUNNER_TEMP=/github/runner_temp \
+          -e GITHUB_ACTIONS=true \
+          -e CI=true \
+          -v "${RUNNER_TEMP}:/github/runner_temp" \
+          -v "${RUNNER_TEMP}/_github_home:/github/home" \
+          -v "${GITHUB_WORKSPACE}:/github/workspace" \
+          "${IMAGE}"
