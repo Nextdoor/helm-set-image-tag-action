@@ -3,7 +3,7 @@
 # the mirror must use Docker Hub's paths (for example `library/alpine`).
 ARG REGISTRY=docker.io
 
-FROM ${REGISTRY}/alpine/helm:4.3.0 AS helm
+FROM ${REGISTRY}/alpine/helm:4.3.1 AS helm
 FROM ${REGISTRY}/jnorwood/helm-docs:v1.11.3 AS helm-docs
 
 FROM ${REGISTRY}/library/alpine:3.18
